@@ -3,25 +3,27 @@
 #include <string.h>
 //#include <sys/types.h>
 #include <dirent.h>
+
 /* filter struct for file search */
 
-struct FILTER{
-char *name;
-long long size ;
-__uint32_t mode;
-__uint16_t number_of_link;
-}FILTER = {.mode=0,.size=0,.number_of_link=0};
+struct FILTER {
+    char *name;
+    long long size;
+    __uint32_t mode;
+    __uint16_t number_of_link;
+} FILTER = {.mode=0, .size=0, .number_of_link=0};
 typedef struct FILTER filter;
 
-
+typedef struct path_node {
+    char *path;
+    struct path_node *next;
+} path_node;
 
 
 /* print file list_files_r*/
 void list_files_r(char *target_path, int depth);
 
-
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
 
     // Directory path to list files
     char path[100];
@@ -30,7 +32,7 @@ int main(int argc, char **argv)
     printf("Enter path to list files: ");
 
     scanf("%s", path);
-    printf("%s\n",path);
+    printf("%s\n", path);
 
     list_files_r(path, 0);
 
@@ -38,9 +40,7 @@ int main(int argc, char **argv)
 }
 
 
-
-void list_files_r(char *target_path, int depth)
-{
+void list_files_r(char *target_path, int depth) {
 
     int i;
     char path[1000];
@@ -50,13 +50,11 @@ void list_files_r(char *target_path, int depth)
     if (!dir)
         return;
 
-    while ((dp = readdir(dir)) != NULL)
-    {
-        if (strcmp(dp->d_name, ".") != 0 && strcmp(dp->d_name, "..") != 0)
-        {   printf("|");
-            for (i=0; i< (depth + 1) * 2; i++)
-            {
-                    printf("%c", '-');
+    while ((dp = readdir(dir)) != NULL) {
+        if (strcmp(dp->d_name, ".") != 0 && strcmp(dp->d_name, "..") != 0) {
+            printf("|");
+            for (i = 0; i < (depth + 1) * 2; i++) {
+                printf("%c", '-');
 
             }
 
@@ -68,6 +66,6 @@ void list_files_r(char *target_path, int depth)
             list_files_r(path, depth + 1);
         }
     }
-    
+
     closedir(dir);
 }
