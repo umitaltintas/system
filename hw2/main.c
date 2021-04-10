@@ -8,13 +8,13 @@
 //#include <string.h>
 double Pn(int n, double x[n + 1], double X);
 
-int child_thread(int fd);
+int child_thread(FILE *fd);
 
 double Li(int i, int n, const double x[n + 1], double X);
 
 int block_file(int fd);
 
-void unblock_file(int fd);
+int unblock_file(int fd);
 
 int main(void) {
 
@@ -22,9 +22,9 @@ int main(void) {
      * shared operations for child's and mother
      * */
 
-    int fd = open("input.txt", O_RDWR);
+    FILE *fd = fopen("input.txt", "r+");
 
-    if (fd == -1) {
+    if (fd == NULL) {
         perror("open");
         return 1;
     }
@@ -59,7 +59,7 @@ int main(void) {
     int stat;
     int t_id;
     while (-1 != (t_id = wait(&stat)) || errno != ECHILD) {
-//        printf("%d is finished with status: %d\n", t_id, stat);
+        printf("%d is finished with status: %d\n", t_id, stat);
     }
     close(fd);
 
@@ -70,9 +70,10 @@ int main(void) {
  *child process's main function.
  */
 
-int child_thread(int fd) {
-    FILE *fp = fdopen(fd, "r");
-    block_file(fd);
+int child_thread(FILE *fp) {
+//    FILE *fp = fdopen(fd, "r");
+
+    block_file(fileno(fp));
 
 
 
@@ -99,28 +100,31 @@ int child_thread(int fd) {
 //    for (int i = 0; i <8;i++){
 //        printf("x%d:%lf, y:%lf  ",i,fun[i*2],fun[i*2+1]);
 //    }
-    printf("\n calculate5 : %lf ", Pn(5, fun, fun[14]));
-    printf("calculate6: %lf \n", Pn(6, fun, fun[14]));
-    unblock_file(fd);
+    printf("\n calculate5 : %.2lf ", Pn(5, fun, fun[14]));
+    printf("calculate6: %.2lf \n", Pn(6, fun, fun[14]));
+    unblock_file(fileno(fp));
 
 
     free(tmp);
     return 0;
 }
 
-void unblock_file(int fd) {/* unlock file*/
+int unblock_file(int fd) {/* unlock file*/
     if (fcntl(fd, F_UNLCK, NULL) == -1) {
-        perror("fcntl");
-        exit(1);
+        perror("unblock_file|fcntl");
+        return -1;
     }
+    return 0;
 }
 
 int block_file(int fd) {
-    struct flock fl = {.l_type = F_UNLCK, .l_start =0, .l_len=0, .l_whence=SEEK_SET};
+    struct flock fl = {.l_start =0, .l_len=0};
     /*  lock file for writing*/
     fl.l_type = F_WRLCK;
+    errno = 0;
     if (fcntl(fd, F_SETLKW, &fl) == -1) {
-        perror("fcntl");
+        perror("block_file|fcntl");
+        fprintf(stderr, "invalid fd:%d\n", fd);
         return -1;
     }
     return 0;
