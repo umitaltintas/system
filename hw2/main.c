@@ -4,10 +4,17 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <errno.h>
+
 //#include <string.h>
-double Pn(int n, double x[n+1],  double X);
+double Pn(int n, double x[n + 1], double X);
+
 int child_thread(int fd);
-double Li(int i, int n, const double x[n+1], double X);
+
+double Li(int i, int n, const double x[n + 1], double X);
+
+int block_file(int fd);
+
+void unblock_file(int fd);
 
 int main(void) {
 
@@ -64,20 +71,8 @@ int main(void) {
  */
 
 int child_thread(int fd) {
-    struct flock fl = {.l_type = F_UNLCK, .l_start =0, .l_len=0, .l_whence=SEEK_SET};
-    FILE * fp=fdopen(fd,"r");
-
-
-
-
-
-
-    /* lock file for writing*/
-    fl.l_type = F_WRLCK;
-    if (fcntl(fd, F_SETLKW, &fl) == -1) {
-        perror("fcntl");
-        exit(1);
-    }
+    FILE *fp = fdopen(fd, "r");
+    block_file(fd);
 
 
 
@@ -88,73 +83,66 @@ int child_thread(int fd) {
 
     /*read from file*/
 
-    char* buffer= (char*)malloc(sizeof(char)*250);
-    fgets(buffer, 250,fp);
-    char* tmp=buffer;
+    char *buffer = (char *) malloc(sizeof(char) * 250);
+    fgets(buffer, 250, fp);
+    char *tmp = buffer;
 
 
     double fun[16];
     char *end;
-    for (int i = 0; i <16; i++){
-        fun[i]=strtod(buffer,&end);
-        buffer=end+1;
+    for (int i = 0; i < 16; i++) {
+        fun[i] = strtod(buffer, &end);
+        buffer = end + 1;
     }
 
-    printf("child:%d\n",getpid());
+    printf("child:%d\n", getpid());
 //    for (int i = 0; i <8;i++){
 //        printf("x%d:%lf, y:%lf  ",i,fun[i*2],fun[i*2+1]);
 //    }
-    printf("\n calculate5 : %lf ",Pn(5,fun,fun[14]));
-    printf("calculate6: %lf \n",Pn(6,fun,fun[14]));
+    printf("\n calculate5 : %lf ", Pn(5, fun, fun[14]));
+    printf("calculate6: %lf \n", Pn(6, fun, fun[14]));
+    unblock_file(fd);
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    /* unlock file*/
-    if (fcntl(fd, F_UNLCK, &fl) == -1) {
-        perror("fcntl");
-        exit(1);
-    }
-    free(tmp) ;
+    free(tmp);
     return 0;
 }
 
-double Li(int i, int n, const double x[], double X){
+void unblock_file(int fd) {/* unlock file*/
+    if (fcntl(fd, F_UNLCK, NULL) == -1) {
+        perror("fcntl");
+        exit(1);
+    }
+}
+
+int block_file(int fd) {
+    struct flock fl = {.l_type = F_UNLCK, .l_start =0, .l_len=0, .l_whence=SEEK_SET};
+    /*  lock file for writing*/
+    fl.l_type = F_WRLCK;
+    if (fcntl(fd, F_SETLKW, &fl) == -1) {
+        perror("fcntl");
+        return -1;
+    }
+    return 0;
+}
+
+double Li(int i, int n, const double x[], double X) {
     int j;
-    double prod=1;
-    for(j=0;j<=n;j++){
-        if(j!=i)
-            prod=prod*(X-x[j*2])/(x[i*2]-x[j*2]);
+    double prod = 1;
+    for (j = 0; j <= n; j++) {
+        if (j != i)
+            prod = prod * (X - x[j * 2]) / (x[i * 2] - x[j * 2]);
     }
     return prod;
 }
 
 /*Function to evaluate Pn(x) where Pn is the Lagrange interpolating polynomial of degree n*/
 
-double Pn(int n, double x[], double X){
-    double sum=0;
+double Pn(int n, double x[], double X) {
+    double sum = 0;
     int i;
-    for(i=0;i<=n;i++){
-        sum=sum+Li(i,n,x,X)*x[2*i+1];
+    for (i = 0; i <= n; i++) {
+        sum = sum + Li(i, n, x, X) * x[2 * i + 1];
     }
     return sum;
 }
