@@ -5,7 +5,7 @@
 #include "usage.h"
 #include <stdio.h>
 int printUsage(){
-    printf("-b: aspotatoornot\n"
+    printf("-b: haspotatoornot\n"
            "–s: nameofsharedmemory\n"
            "–f: filewithfifonames\n");
 }
