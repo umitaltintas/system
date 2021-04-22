@@ -4,15 +4,17 @@
 #include "globals.h"
 #include "usage.h"
 #include <errno.h>
+#include <time.h>
 
 void report_and_exit(const char *msg) {
   perror(msg);
   exit(-1);
 }
 int fill_fifo_files(const char *);
-void write_to_shrm();
-void read_from_shrm();
+
+int select_random_index();
 int main(int argc, char **argv) {
+  srand(time(0));
 
   int c;
   char *shared_mem_name;
@@ -51,7 +53,6 @@ int main(int argc, char **argv) {
   printf("shared_mem_name: %s , fifo_names_file: %s, pot_sw_count: %d",
          shared_mem_name, fifo_names_file, pot_sw_count);
 
-
   errno = 0;
   int fd = shm_open(shared_mem_name,  /* name from smem.h */
                     O_RDWR | O_CREAT, /* read/write, create if needed */
@@ -85,35 +86,44 @@ int main(int argc, char **argv) {
   if (sem == (void *)-1) {
     report_and_exit("sem_open");
   }
+  fill_fifo_files(fifo_names_file);
+  shrm = (sm *)memptr;
 
-  if (!is_creator) {
-    if (!sem_wait(sem)) {
-    } else {
-      report_and_exit("sem_wait");
+  if (is_creator) {
+    for (int i = 0; i < fifo_count; i++) {
+      if (0 != mkfifo(fifo_file_names[i], 0666)) {
+        report_and_exit("mkfifo");
+      }
     }
-
-  } else {
+    sem_init(&(shrm->sem), 1, 1);
     shrm->fifo_index = 0;
-    write_to_shrm();
+    shrm->potato_c = 0;
+    sem_post(sem);
   }
-  read_from_shrm();
-  read_index=shrm->fifo_index;
-  shrm->peer[shrm->fifo_index][POTATO_INDEX] = pot_sw_count;
-  shrm->peer[shrm->fifo_index][PID_INDEX] = getpid();
+  sem_wait(sem);
+  read_index = shrm->fifo_index;
+  if ((shrm->peer[read_index][POTATO_INDEX] = pot_sw_count)) {
+    shrm->potato_c++;
+  }
+  shrm->peer[read_index][PID_INDEX] = getpid();
   shrm->fifo_index++;
-  write_to_shrm();
   sem_post(sem);
 
-  for (int i = 0; i < fifo_count; ++i) {
-    if (i==read_index){
-
+  for (int i = 0; i < fifo_count; i++) {
+    if (read_index != i) {
+      fifo_fd[i] = open(fifo_file_names[i], O_WRONLY);
+    } else {
+      fifo_fd[i] = open(fifo_file_names[i], O_RDONLY);
     }
+  }
+  int potato_id = read_index;
+  sem_wait(&shrm->sem);
+  if (!shrm->peer[read_index][POTATO_INDEX]) {
+    write(fifo_fd[select_random_index()], potato_id, sizeof(potato_id));
   }
 
   return 0;
 }
-void read_from_shrm() { memcpy(shrm, memptr, sizeof(struct SM)); }
-void write_to_shrm() { memcpy(memptr, shrm, sizeof(struct SM)); }
 
 int fill_fifo_files(const char *file_name) {
 
@@ -134,4 +144,12 @@ int fill_fifo_files(const char *file_name) {
     report_and_exit(fgets);
   }
   return -1;
+}
+
+int select_random_index() {
+  int randn = read_index;
+  while (randn == read_index) {
+    randn = (rand() % fifo_count);
+  }
+  return randn;
 }
