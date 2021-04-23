@@ -4,6 +4,7 @@
 #include "globals.h"
 #include "usage.h"
 #include <errno.h>
+#include <stdbool.h>
 #include <time.h>
 
 void report_and_exit(const char *msg) {
@@ -13,6 +14,8 @@ void report_and_exit(const char *msg) {
 int fill_fifo_files(const char *);
 
 int select_random_index();
+void finish();
+void send_finish_sign();
 int main(int argc, char **argv) {
   srand(time(0));
 
@@ -50,6 +53,7 @@ int main(int argc, char **argv) {
       exit(EXIT_FAILURE);
     }
   }
+
   printf("shared_mem_name: %s , fifo_names_file: %s, pot_sw_count: %d",
          shared_mem_name, fifo_names_file, pot_sw_count);
 
@@ -117,19 +121,58 @@ int main(int argc, char **argv) {
     }
   }
   int potato_id = read_index;
-  sem_wait(&shrm->sem);
-  if (!shrm->peer[read_index][POTATO_INDEX]) {
-    write(fifo_fd[select_random_index()], potato_id, sizeof(potato_id));
+  int random_number;
+  while (true) {
+    sem_wait(&shrm->sem);
+    random_number = select_random_index();
+    if (!shrm->peer[potato_id][POTATO_INDEX]) {
+      printf("pid=%d sending potato number %d to %s; %d switch left\n",
+             getpid(), shrm->peer[potato_id][PID_INDEX],
+             fifo_file_names[random_number],
+             shrm->peer[potato_id][POTATO_INDEX] - 1);
+      write(fifo_fd[random_number], &potato_id, sizeof(potato_id));
+    }
+    sem_post(&shrm->sem);
+    read(fifo_fd[read_index], &potato_id, sizeof(potato_id));
+    if (potato_id == -1) {
+      finish();
+      break;
+    } else {
+      sem_wait(&shrm->sem);
+      shrm->peer[potato_id][POTATO_INDEX]--;
+      if (shrm->peer[potato_id][POTATO_INDEX] == 0) {
+        shrm->potato_c--;
+      } else {
+        printf("pid=%d receiving potato number %d from %s\n", getpid(),
+               shrm->peer[potato_id][PID_INDEX], fifo_file_names[read_index],
+               shrm->peer[potato_id][POTATO_INDEX] - 1);
+        if (shrm->potato_c == 0) {
+          printf("pid=%d; potato number %d has cooled down.\n", getpid(),
+                 shrm->peer[potato_id][PID_INDEX]);
+          send_finish_sign();
+          break;
+        }
+      }
+
+      sem_post(&shrm->sem);
+    }
   }
 
   return 0;
 }
+void send_finish_sign() {
+  for (int i = 0; i < fifo_count;) {
+    write(fifo_fd[i], (int *)-1, sizeof(int));
+  }
+}
+void finish() {}
 
 int fill_fifo_files(const char *file_name) {
 
   FILE *fp;
   if (NULL == (fp = fopen(file_name, "r"))) {
     report_and_exit("fopen failed");
+    return -1;
   }
   while (fgets(fifo_file_names[fifo_count], 250, fp) != NULL) {
     fifo_count++;
@@ -141,15 +184,15 @@ int fill_fifo_files(const char *file_name) {
     return 1;
   }
   if (ferror(fp)) {
-    report_and_exit(fgets);
+    report_and_exit("fgets");
   }
   return -1;
 }
 
 int select_random_index() {
-  int randn = read_index;
-  while (randn == read_index) {
-    randn = (rand() % fifo_count);
+  int random_number = read_index;
+  while (random_number == read_index) {
+    random_number = (rand() % fifo_count);
   }
-  return randn;
+  return random_number;
 }
