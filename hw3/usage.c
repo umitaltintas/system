@@ -4,8 +4,10 @@
 
 #include "usage.h"
 #include <stdio.h>
-int printUsage(){
-    printf("-b: haspotatoornot\n"
-           "–s: nameofsharedmemory\n"
-           "–f: filewithfifonames\n");
+int printUsage() {
+  printf("-b: haspotatoornot\n"
+         "–s: nameofsharedmemory\n"
+         "–f: filewithfifonames\n"
+         "-m semaphorename");
+  return 1;
 }
