@@ -10,14 +10,14 @@ VARIABLES
 I have defined main variables as global for easy memory management.
 Moved them to the global header file.
 
-![globals figure](globals.png "fig:") 
+![globals figure](latex/globals.png "fig:") 
 
 SIGNAL
 ======
 
 I have define a finish function as a signal handler.
 
-![signal figure](signal.png "fig:") 
+![signal figure](latex/signal.png "fig:") 
 
 SHARED MEMORY
 =============
@@ -28,7 +28,7 @@ flag . With this return value have decided who will truncate it and
 create default values of shared memory. Lastly all processes write their
 information to the shared memory.(potato sw number eg.)
 
-![shared memory figure](shared.png "fig:") 
+![shared memory figure](latex/shared.png "fig:") 
 
 SEMAPHORE
 =========
@@ -36,16 +36,16 @@ SEMAPHORE
 I have used to semaphore for synchronization. One for decide who take
 which fifo file and one for who will write to the shared memory
 
-![semaphore figure 1](sem1.png "fig:") 
+![semaphore figure 1](latex/sem1.png "fig:") 
 
 This semaphore used for selecting fifo files. it start with 0. after
 creator process create fifos it post the semaphore. After that they take
 their fifos respectively. For desicion who take which fifo i have used a
 index insede the shared memory.
 
-![fifo index figure 2](shrm-fifo-index.png "fig:") [fig:fifo-index]
+![fifo index figure 2](latex/shrm-fifo-index.png "fig:") [fig:fifo-index]
 
-![semaphore figure 2](sem2.png "fig:") 
+![semaphore figure 2](latex/sem2.png "fig:") 
 
 This semaphore decides who can change shared memories values.
 
@@ -56,7 +56,7 @@ After creation fifos they open their fifos as reader and open others as
 writer. Also fifo file names index and pid indexes(inside the shared
 memory) are same.
 
-![fifo figure 2](fifo-open.png "fig:") 
+![fifo figure 2](latex/fifo-open.png "fig:") 
 
 TRANSFER
 ========
@@ -133,7 +133,7 @@ MEMORY
 Using advantage of the defining main variables as global. I can easyly
 free and close them with finish function.
 
-![memory figure 2](memory.png "fig:")
+![memory figure 2](latex/memory.png "fig:")
 
 FILE STRUCTURE
 ==============
