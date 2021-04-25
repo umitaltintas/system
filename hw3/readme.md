@@ -43,7 +43,7 @@ creator process create fifos it post the semaphore. After that they take
 their fifos respectively. For desicion who take which fifo i have used a
 index insede the shared memory.
 
-![fifo index figure 2](latex/shrm-fifo-index.png "fig:") [fig:fifo-index]
+![fifo index figure 2](latex/shrm-fifo-index.png "fig:")
 
 ![semaphore figure 2](latex/sem2.png "fig:") 
 
