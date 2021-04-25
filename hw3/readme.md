@@ -71,7 +71,7 @@ changing shared memory. When take permission it decrease the potato
 switch number and check active potato switch number . If switch number
 become 0 it decrease active potato count after that it check active
 potato count also if it become 0 sends all fifos a finish signal which
-is -3 in my case. All of the above is inside a finite loop.
+is -3 in my case. All of the above is inside a infinite loop.
 
 ```c
 while (true) {
