@@ -7,7 +7,7 @@ usage print function to the usage.h header for further changing.
 VARIABLES
 =========
 
-I have defined main variables as global for easy memory management.
+I have defined the main variables as global for easy memory management.
 Moved them to the global header file.
 
 ![globals figure](latex/globals.png "fig:") 
@@ -15,33 +15,33 @@ Moved them to the global header file.
 SIGNAL
 ======
 
-I have define a finish function as a signal handler.
+I have defined a finish function as a signal handler.
 
 ![signal figure](latex/signal.png "fig:") 
 
 SHARED MEMORY
 =============
 
-First of all I have tried to open file with EXCL flag so if it is
-already exist return -1, if it is return -1 I have tried without EXCL
-flag . With this return value have decided who will truncate it and
-create default values of shared memory. Lastly all processes write their
-information to the shared memory.(potato sw number eg.)
+First of all, I have tried to open file with EXCL flag so if it is
+already exist return -1 if it is return -1 I have tried without EXCL
+flag. With this return value have decided who will truncate it and
+create default values of shared memory. Lastly, all processes write their
+information to the shared memory. (potato sw number eg.)
 
 ![shared memory figure](latex/shared.png "fig:") 
 
 SEMAPHORE
 =========
 
-I have used to semaphore for synchronization. One for decide who take
-which fifo file and one for who will write to the shared memory
+I have used to semaphore for synchronization. One for deciding who take
+which FIFO file and one for who will write to the shared memory
 
 ![semaphore figure 1](latex/sem1.png "fig:") 
 
-This semaphore used for selecting fifo files. it start with 0. after
-creator process create fifos it post the semaphore. After that they take
-their fifos respectively. For desicion who take which fifo i have used a
-index insede the shared memory.
+This semaphore used for selecting FIFO files. it starts with 0. after
+the creator process creates fifoes it posts the semaphore. After that, they take
+their fifo's respectively. For decision who takes which fifo I have used an
+index inside the shared memory.
 
 ![fifo index figure 2](latex/shrm-fifo-index.png "fig:")
 
@@ -52,26 +52,24 @@ This semaphore decides who can change shared memories values.
 FIFO
 ====
 
-After creation fifos they open their fifos as reader and open others as
-writer. Also fifo file names index and pid indexes(inside the shared
-memory) are same.
+After creation fifos, they open their fifos as a reader and open others as
+a writer. Also, fifo file names index and PID indexes(inside the shared
+memory) are the same.
 
 ![fifo figure 2](latex/fifo-open.png "fig:") 
 
 TRANSFER
 ========
 
-At first they wait for semaphore 2 for getting info’s from shared
-memory. after that if they check their potatoes switch number. if it is
-not zero select a random fifo and send its potato. After sending potato
-post the semaphore and starts reading its fifo. If they read finish
-signal they they break the loop and call the finish function for memory
-management, if it is read a valid potato, it wait for semaphore 2 for
-changing shared memory. When take permission it decrease the potato
-switch number and check active potato switch number . If switch number
-become 0 it decrease active potato count after that it check active
-potato count also if it become 0 sends all fifos a finish signal which
-is -3 in my case. All of the above is inside a infinite loop.
+At first, they wait for semaphore 2 for getting info’s from shared
+memory. after that, if they check their potatoes switch number. if it is
+not zero select a random FIFO and send its potato. After sending potato
+post the semaphore and starts reading its FIFO. If they read the finish
+signal they break the loop and call the finish function for memory
+management, if it is read a valid potato, it waits for semaphore 2 for
+changing shared memory. When taking permission it decreases the potato
+switch number and checks the active potato switch number. If the switch number becomes 0 it decreases active potato count after that it checks active potato count also if it becomes 0 sends all fifos a finish signal which
+is -3 in my case. All of the above is inside an infinite loop.
 
 ```c
 while (true) {
@@ -130,8 +128,8 @@ while (true) {
 MEMORY
 ======
 
-Using advantage of the defining main variables as global. I can easyly
-free and close them with finish function.
+Using the advantage of defining main variables as global. I can easily
+free and close them with the finish function.
 
 ![memory figure 2](latex/memory.png "fig:")
 
