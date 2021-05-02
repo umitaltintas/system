@@ -210,6 +210,22 @@ int main(int argc, char *argv[]) {
     while (wait(NULL) > 0)
         ;
     printf("The clinic i;s now closed. Stay healthy.");
+
+
+    sem_destroy(&room_p->sem_vac);
+    sem_destroy(&fridge_p->sem_common);
+    sem_destroy(&fridge_p->sem_vac);
+    sem_destroy(&fridge_p->sem_nurse);
+    err = munmap(fridge_p, sizeof(struct FRIDGE));
+    if(err == -1){
+        perror("munmap");
+        return -1;
+    }
+    err = munmap(room_p, sizeof(struct ROOM));
+    if(err == -1){
+        perror("munmap");
+        return -1;
+    }
     return 0;
 }
 
@@ -273,16 +289,8 @@ int nurse_child(int id) {
 }
 
 
-
-
-
-
-
-
-
-
 void print_nurse_and_fridge_status(int id, int read_int) { printf("Nurse %d has brought vaccine %d: the clinic has %d vaccine1 and %d vaccine2 ",
-       id, read_int, fridge_p->first, fridge_p->second); }
+                                                                  id, read_int, fridge_p->first, fridge_p->second); }
 void tell_vaccine_aviable() { sem_post(&fridge_p->sem_vac); }
 void wait_fridge_until_aviable() { sem_wait(&fridge_p->sem_common); }
 void wait_for_empty_fridge_slot() { sem_wait(&fridge_p->sem_nurse); }
