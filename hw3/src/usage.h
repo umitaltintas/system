@@ -7,6 +7,4 @@
 
 int printUsage();
 
-
-
 #endif //HW3_USAGE_H
