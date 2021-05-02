@@ -19,7 +19,7 @@ static sigset_t new_mask;
 static sigset_t old_mask;
 static sigset_t zero_mask;
 void secure_wait_for_child();
-void sig_child(pid_t pid);
+void call_citizen(pid_t pid);
 void suspend_child(void);
 void suspend_parent(void);
 void block_signals(void);

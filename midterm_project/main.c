@@ -1,9 +1,7 @@
 // C program to demonstrate working of fork()
 #include "file_locking.h"
 #include "signal_handler.h"
-#include <errno.h>
 #include <fcntl.h> /* For O_* constants */
-#include <pthread.h>
 #include <semaphore.h>
 #include <signal.h>
 #include <stdbool.h>
@@ -11,7 +9,6 @@
 #include <stdlib.h>
 #include <sys/mman.h>
 #include <sys/stat.h> /* For mode constants */
-#include <sys/types.h>
 #include <unistd.h>
 #include <wait.h>
 
@@ -26,7 +23,6 @@ struct FRIDGE {
 struct ROOM {
     pid_t citizens[MAX_CITIZEN_COUNT];
     int citizen_index;
-    int tour;
     sem_t sem_vac;
 };
 
@@ -43,18 +39,26 @@ struct FRIDGE *fridge_p;
 struct ROOM *room_p;
 
 
-#define MaxItems 5// Maximum items a producer can produce or a consumer can consume
-#define BufferSize 5// Size of the buffer
-
 #define FRIDGE_KEY "fridge_key"
 #define ROOM_KEY "room_key"
 #define MAX_NURSES_COUNT 100
-int buffer[BufferSize];
 int printUsage();
 int vaccinator_child();
 int nurse_child();
 int citizen_child();
 void signal_handler(int);
+void take_vaccine_from_fridge();
+void wait_until_vaccine_aviable();
+void tell_fridge_aviable();
+void wait_until_room_aviable();
+bool is_vaccination_finished();
+void tell_room_aviable();
+void wait_for_empty_fridge_slot();
+void wait_fridge_until_aviable();
+void tell_vaccine_aviable();
+void print_nurse_and_fridge_status(int id, int read_int);
+void print_citizen_vactination_status(int index, pid_t pid);
+void print_vacinator_status(int id, int vac_count);
 int main(int argc, char *argv[]) {
     int nurses[MAX_NURSES_COUNT];
     if (argc < 13) {
@@ -215,29 +219,27 @@ int vaccinator_child(int id) {
     pid_t pid;
     int vac_count = 0;
     do {
-        sem_wait(&fridge_p->sem_vac);
-        sem_wait(&fridge_p->sem_common);
-        fridge_p->first--;
-        fridge_p->second--;
-        sem_post(&fridge_p->sem_common);
-        sem_wait(&room_p->sem_vac);
-        if (room_p->citizen_index >= n_shot * n_citizens)
+        wait_until_vaccine_aviable();
+        take_vaccine_from_fridge();
+        tell_fridge_aviable();
+        wait_until_room_aviable();
+        if (is_vaccination_finished())
             break;
         index = room_p->citizen_index;
         pid = room_p->citizens[index % n_citizens];
-        sem_post(&room_p->sem_vac);
-        sig_child(pid);
-        sem_wait(&fridge_p->sem_common);
-        printf("Citizen %d (pid=%d) is vaccinated for the %dth time: the clinic has %d vaccine1 and %d vaccine2\n",
-               index, pid, index / n_citizens + 1, fridge_p->first, fridge_p->second);
+        tell_room_aviable();
+        call_citizen(pid);
+        wait_fridge_until_aviable();
+        print_citizen_vactination_status(index, pid);
         sem_post(&fridge_p->sem_common);
-        sig_child(pid);
+
         vac_count++;
 
     } while (true);
-    printf("Vaccinator %d (pid=%d) vaccinated %d doses.", id, getpid(), vac_count);
+    print_vacinator_status(id, vac_count);
     return 0;
 }
+
 int nurse_child(int id) {
     char read_char;
     int read_int;
@@ -250,28 +252,58 @@ int nurse_child(int id) {
             break;
         }
         read_int = read_char - '0';
-        sem_wait(&fridge_p->sem_nurse);
-        sem_wait(&fridge_p->sem_common);
+        wait_for_empty_fridge_slot();
+        wait_fridge_until_aviable();
         if (read_int == 1) {
             fridge_p->first++;
             if (fridge_p->second >= fridge_p->first) {
-                sem_post(&fridge_p->sem_vac);
+                tell_vaccine_aviable();
             }
         } else if (read_int == 2) {
             fridge_p->second++;
             if (fridge_p->first >= fridge_p->second) {
-                sem_post(&fridge_p->sem_vac);
+                tell_vaccine_aviable();
             }
         }
-        printf("Nurse %d has brought vaccine %d: the clinic has %d vaccine1 and %d vaccine2 ",
-               id, read_int, fridge_p->first, fridge_p->second);
-        sem_post(&fridge_p->sem_common);
+        print_nurse_and_fridge_status(id, read_int);
+        tell_fridge_aviable();
     } while (true);
 
     return 0;
 }
+
+
+
+
+
+
+
+
+
+
+void print_nurse_and_fridge_status(int id, int read_int) { printf("Nurse %d has brought vaccine %d: the clinic has %d vaccine1 and %d vaccine2 ",
+       id, read_int, fridge_p->first, fridge_p->second); }
+void tell_vaccine_aviable() { sem_post(&fridge_p->sem_vac); }
+void wait_fridge_until_aviable() { sem_wait(&fridge_p->sem_common); }
+void wait_for_empty_fridge_slot() { sem_wait(&fridge_p->sem_nurse); }
 int citizen_child() {
     block_signals();
     for (int i = 0; i < n_shot; i++) { suspend_child(); }
     return 0;
+}
+
+void print_vacinator_status(int id, int vac_count) { printf("Vaccinator %d (pid=%d) vaccinated %d doses.", id, getpid(), vac_count); }
+void print_citizen_vactination_status(int index, pid_t pid) { printf("Citizen %d (pid=%d) is vaccinated for the %dth time: the clinic has %d vaccine1 and %d vaccine2\n",
+                                                                     index, pid, index / n_citizens + 1, fridge_p->first, fridge_p->second); }
+void tell_room_aviable() { sem_post(&room_p->sem_vac); }
+bool is_vaccination_finished() { return room_p->citizen_index >= n_shot * n_citizens; }
+void wait_until_room_aviable() { sem_wait(&room_p->sem_vac); }
+void tell_fridge_aviable() { sem_post(&fridge_p->sem_common); }
+void wait_until_vaccine_aviable() {
+    sem_wait(&fridge_p->sem_vac);
+    sem_wait(&fridge_p->sem_common);
+}
+void take_vaccine_from_fridge() {
+    fridge_p->first--;
+    fridge_p->second--;
 }

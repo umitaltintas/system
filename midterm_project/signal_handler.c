@@ -35,7 +35,7 @@ void suspend_child(void) {
 
 /* tell child we’re done */
 
-void sig_child(pid_t pid) { kill(pid, SIGUSR1); }
+void call_citizen(pid_t pid) { kill(pid, SIGUSR1); }
 
 void suspend_parent(void) {
   while (sig_flag == 0)
