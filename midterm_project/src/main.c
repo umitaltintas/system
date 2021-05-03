@@ -173,6 +173,7 @@ int vaccinator_child(int id) {
         close(pipes[i][0]);
     }
     do {
+        if(sig_flag !=0)break;
         wait_until_room_available();
         if (is_vaccination_finished()) {
             for (int i = 0; i < n_vaccinators; ++i) {
@@ -192,13 +193,14 @@ int vaccinator_child(int id) {
 
         index = room_p->citizen_index++;
         pid = room_p->citizens[index % n_citizens];
-
         tell_room_available();
 
-        call_citizen(index % n_citizens);
+
         printf("Vaccinator %d (pid=%d) is inviting citizen pid=%d to the clinic\n", id, getpid(), pid);
+        call_citizen(index % n_citizens);
         fflush(stdout);
         print_citizen_vactination_status(index, pid);
+
         vac_count++;
     } while (true);
     for (int i = 0; i < n_citizens; ++i) {
@@ -225,6 +227,7 @@ int nurse_child(int id) {
     int read_int;
     size_t ret_val;
     do {
+        if(sig_flag !=0)break;
         block_file(fd);
         ret_val = read(fd, &read_char, sizeof(char));
         unblock_file(fd);
@@ -233,13 +236,7 @@ int nurse_child(int id) {
         }
         read_int = read_char - '0';
 
-        fflush(stdout);
-
         wait_for_empty_fridge_slot();
-
-
-        fflush(stdout);
-
         wait_fridge_until_available();
 
 
@@ -268,7 +265,7 @@ int citizen_child(int fdr) {
         return -1;
     }
     char r;
-    for (int i = 0; i < n_shot; i++) {
+    for (int i = 0;( i < n_shot)&&(sig_flag ==0); i++) {
 
 
         if (-1 == read(fdr, &r, sizeof(char))) {
