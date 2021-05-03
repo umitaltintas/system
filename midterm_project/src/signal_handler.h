@@ -14,15 +14,13 @@
 #include <unistd.h>
 
 
-static volatile sig_atomic_t sig_flag =0;
-static sigset_t new_mask;
-static sigset_t old_mask;
-static sigset_t zero_mask;
+static volatile sig_atomic_t sig_flag = 0;
+
 void secure_wait_for_child();
-void call_citizen(pid_t pid);
+
 void suspend_child(void);
 void suspend_parent(void);
 void block_signals(void);
 void sig_parent(pid_t pid);
 
-#endif // HW2_SIGNAL_HANDLER_H
+#endif// HW2_SIGNAL_HANDLER_H
