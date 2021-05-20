@@ -5,7 +5,7 @@
 #define MAX_QUEUE 100
 
 int *create_queue(void);
-int isFull(void);
+int is_queue_full(void);
 int is_queue_empty(void);
 void enqueue(int[], int);
 int dequeue(int[]);

@@ -11,7 +11,7 @@ int *create_queue(void) { // dynamically allocate memory for queue.
   return (int *)malloc(sizeof(int) * MAX_QUEUE);
 }
 
-int isFull(void) { // determine if queue is full.
+int is_queue_full(void) { // determine if queue is full.
   return FRONT == REAR && TAG == 1;
 }
 
@@ -21,7 +21,7 @@ int is_queue_empty(void) { // determine if queue is empty.
 
 void enqueue(int queue[], int item) { // insert an item into queue.
 
-  if (isFull()) {
+  if (is_queue_full()) {
 #ifdef DEBUG
     printf("Queue is full!!\n");
 #endif
