@@ -9,6 +9,7 @@
 #include "queue.h"
 #include <pthread.h>
 #include <semaphore.h>
+#include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,9 +17,14 @@
 #include <unistd.h>
 sem_t student_count_sem;
 
+void signal_handler(int sig) {
+  printf("sig:%d \n", sig);
+  finished_flag = 1;
+}
 int main(int argc, char *argv[]) {
+  signal(SIGINT, signal_handler);
   int solved_hw_count = 0;
-  int harcama = 0;
+  int spent = 0;
   struct StudentForHire student_arr[MAX_STUDENT_COUNT];
   pthread_t student_thread_arr[MAX_STUDENT_COUNT];
   queue = create_queue();
@@ -28,10 +34,14 @@ int main(int argc, char *argv[]) {
     finished_flag = 1;
   }
   if (!finished_flag) {
-    sem_init(&reader_p.occupied, 0, 0);
-    sem_init(&reader_p.empty, 0, MAX_QUEUE);
-    sem_init(&reader_p.pmut, 0, 1);
-    sem_init(&reader_p.cmut, 0, 1);
+    if (0 != (sem_init(&reader_p.occupied, 0, 0))) {
+    };
+    if (0 != (sem_init(&reader_p.empty, 0, MAX_QUEUE))) {
+    };
+    if (0 != (sem_init(&reader_p.pmut, 0, 1))) {
+    };
+    if (0 != (sem_init(&reader_p.cmut, 0, 1))) {
+    };
     pthread_create(&readerThreadID, NULL, &readerThread, argv[1]);
   }
 
@@ -51,19 +61,39 @@ int main(int argc, char *argv[]) {
            &student_arr[student_count].speed,
            &student_arr[student_count].quality,
            &student_arr[student_count].cost);
-    student_arr[student_count].access_sem = (sem_t *)malloc(sizeof(sem_t));
-    sem_init(student_arr[student_count].access_sem, 1, 1);
-    student_arr[student_count].start_flag = (sem_t *)malloc(sizeof(sem_t));
-    student_arr[student_count].busy_flag = (int *)malloc(sizeof(int));
+    if (NULL == (student_arr[student_count].access_sem =
+                     (sem_t *)malloc(sizeof(sem_t)))) {
+      perror("malloc");
+      finished_flag = 1;
+    }
+    if (0 != (sem_init(student_arr[student_count].access_sem, 1, 1))) {
+      perror("sem_init");
+
+      finished_flag = 1;
+    };
+    if (NULL == (student_arr[student_count].start_flag =
+                     (sem_t *)malloc(sizeof(sem_t)))) {
+      perror("malloc");
+      finished_flag = 1;
+    }
+    if (NULL ==
+        (student_arr[student_count].busy_flag = (int *)malloc(sizeof(int)))) {
+      perror("malloc");
+      finished_flag = 1;
+    }
     if (student_arr[student_count].busy_flag == NULL) {
       perror("busy_flag");
-      exit(1);
+      finished_flag = 1;
+
     } else {
       *student_arr[student_count].busy_flag = 0;
-      //      printf("flag:%d\n", *student_arr[student_count].busy_flag);
     }
 
-    sem_init(student_arr[student_count].start_flag, 1, 0);
+    if (0 != (sem_init(student_arr[student_count].start_flag, 1, 0))) {
+
+      perror("sem_init");
+      finished_flag = 1;
+    };
     student_arr[student_count].hw_count = 0;
 
     student_count++;
@@ -86,7 +116,10 @@ int main(int argc, char *argv[]) {
     cost_arr = sort_students_by_cost(student_arr, student_count);
   }
 
-  sem_init(&student_count_sem, 1, 0);
+  if (0 != (sem_init(&student_count_sem, 1, 0))) {
+    perror("sem_init");
+    finished_flag = 1;
+  };
   for (int i = 0; i < student_count; ++i) {
     if (finished_flag) {
       break;
@@ -101,7 +134,6 @@ int main(int argc, char *argv[]) {
 #endif
   money = atoi(argv[3]); // NOLINT(cert-err34-c)
   char c;
-  int q_c = 0;
   int money_flag = 0;
   while (1) {
     if (finished_flag || money_flag) {
@@ -117,30 +149,28 @@ int main(int argc, char *argv[]) {
     if ((c = (char)dequeue(queue)) == '\0') {
       fprintf(stderr, "dequeue failed\n");
       exit(EXIT_FAILURE);
+    } else {
     }
-    q_c++;
 
     post_reader();
-    sem_wait(&student_count_sem);
+    if (0 != sem_wait(&student_count_sem)) {
+      perror("sem_wait");
+      finished_flag = 1;
+    }
     switch (c) {
     case 'C':
-      //      printf("C:%s\n", cost_arr->name);
-      if (hire_student(student_count, cost_arr, &solved_hw_count, &harcama) ==
-          -1)
+      if (hire_student(student_count, cost_arr, &solved_hw_count, &spent) == -1)
         money_flag = 1;
       break;
     case 'S':
-      //      printf("S:%s\n", speed_arr->name);
 
-      if (hire_student(student_count, speed_arr, &solved_hw_count, &harcama) ==
+      if (hire_student(student_count, speed_arr, &solved_hw_count, &spent) ==
           -1)
         money_flag = 1;
       break;
     case 'Q':
-      //      printf("Q:%s\n", quality_arr->name);
-
-      if (hire_student(student_count, quality_arr, &solved_hw_count,
-                       &harcama) == -1)
+      if (hire_student(student_count, quality_arr, &solved_hw_count, &spent) ==
+          -1)
         money_flag = 1;
       break;
     default:
@@ -150,27 +180,56 @@ int main(int argc, char *argv[]) {
     }
   }
   for (int i = 0; i < student_count; ++i) {
-    sem_wait(student_arr[i].access_sem);
+    if (0 != sem_wait(student_arr[i].access_sem)) {
+      perror("sem_wait");
+      finished_flag = 1;
+    }
     *student_arr[i].busy_flag = -1;
-    sem_post(student_arr[i].access_sem);
-    sem_post(student_arr[i].start_flag);
+    if (0 != sem_post(student_arr[i].access_sem)) {
+      {
+        perror("sem_post");
+        finished_flag = 1;
+      }
+    }
+    if (0 != sem_post(student_arr[i].start_flag)) {
+      {
+        perror("sem_post");
+        finished_flag = 1;
+      }
+    }
   }
 
   if (finished_flag != 0) {
     printf("Terminating signal received, closing.\n");
   }
-  printf("q_c:%d\n", q_c);
   sem_close(&reader_p.empty);
   sem_close(&reader_p.cmut);
   sem_close(&reader_p.occupied);
   sem_close(&reader_p.pmut); // sem_closes
+  int err;
   for (int i = 0; i < student_count; ++i) {
-    pthread_join(student_thread_arr[i], NULL);
+    err = pthread_join(student_thread_arr[i], NULL);
+    if (err != 0) {
+      fprintf(stderr, "pthread_join\n");
+      finished_flag = 1;
+    }
   }
   print_homework_solving_stats(student_arr, student_count, solved_hw_count,
-                               harcama);
+                               spent);
 
-  pthread_join(readerThreadID, NULL); // thread joins
+  err = pthread_join(readerThreadID, NULL);
+  if (err != 0) {
+    fprintf(stderr, "pthread_join\n");
+    finished_flag = 1;
+  }
+  for (int i = 0; i < student_count; ++i) {
+    free(student_arr[i].busy_flag);
+    sem_close(student_arr[i].start_flag);
+    free(student_arr[i].start_flag);
+    sem_close(student_arr[i].access_sem);
+    free(student_arr[i].access_sem);
+
+  } // thread joins
   free(queue);
   free(speed_arr);
   free(quality_arr);
@@ -188,77 +247,136 @@ void print_homework_solving_stats(const struct StudentForHire *student_arr,
   printf("Money left at G's account: %dTL", money);
 }
 void post_reader() {
-  sem_post(&reader_p.cmut);
-  sem_post(&reader_p.empty);
+  if (0 != sem_post(&reader_p.cmut)) {
+    perror("sem_post");
+  };
+  if (0 != sem_post(&reader_p.empty)) {
+    perror("sem_post");
+  };
 }
 void wait_reader() {
-  sem_wait(&reader_p.occupied);
-  sem_wait(&reader_p.cmut);
+  if (0 != sem_wait(&reader_p.occupied)) {
+    perror("sem_wait");
+    finished_flag = 1;
+  }
+  if (0 != sem_wait(&reader_p.cmut)) {
+    perror("sem_wait");
+    finished_flag = 1;
+  }
 }
 int hire_student(int student_count, struct StudentForHire *student_arr,
-                 int *solved_hw_count, int *harcama) {
-  //  printf("inside\n");
+                 int *solved_hw_count, int *spent) {
   for (int i = 0; i < student_count; ++i) {
 
-    sem_wait(student_arr[i].access_sem);
+    if (0 != sem_wait(student_arr[i].access_sem)) {
+      {
+        perror("sem_wait");
+        finished_flag = 1;
+      }
+    }
     if (*student_arr[i].busy_flag == 0) {
-
       if (student_arr[i].cost > money) {
 
         printf("Money is over Closing\n");
         *student_arr[i].busy_flag = -1;
-        sem_post(student_arr[i].access_sem);
+        if (0 != sem_post(student_arr[i].access_sem)) {
+          perror("sem_post");
+          finished_flag = 1;
+        }
         return -1;
-        break;
       }
       *student_arr[i].busy_flag = 1;
       money -= student_arr[i].cost;
-      *harcama += student_arr[i].cost;
+      *spent += student_arr[i].cost;
+      printf("%s is solving homework for %d, H has %dTL left\n",
+             student_arr[i].name, student_arr[i].cost, money);
       *solved_hw_count += 1;
 
-      sem_post(student_arr[i].start_flag);
-      sem_post(student_arr[i].access_sem);
+      if (0 != sem_post(student_arr[i].start_flag)) {
+        perror("sem_post");
+        finished_flag = 1;
+      };
+      if (0 != sem_post(student_arr[i].access_sem)) {
+        perror("sem_post");
+
+        finished_flag = 1;
+      };
 
       return 1;
-      break;
     }
-    sem_post(student_arr[i].access_sem);
+    if (0 != sem_post(student_arr[i].access_sem)) {
+      perror("sem_post");
+      finished_flag = 1;
+    };
   }
+  return 1;
 }
 
 void *studentThread(void *arg) {
   struct StudentForHire *student = (struct StudentForHire *)arg;
   while (true) {
-    sem_post(&student_count_sem);
+    if (0 != sem_post(&student_count_sem)) {
+      perror("sem_post");
+      finished_flag = 1;
+    };
     if (finished_flag)
       break;
-    sem_wait(student->access_sem);
-    if (student->busy_flag == -1) {
-      sem_post(student->access_sem);
+    if (0 != sem_wait(student->access_sem)) {
+      perror("sem_wait");
+      finished_flag = 1;
+    }
+    if (*student->busy_flag == -1) {
+      if (0 != sem_post(student->access_sem)) {
+        perror("sem_post");
+        finished_flag = 1;
+      };
       break;
     }
 
-    sem_post(student->access_sem);
+    if (0 != sem_post(student->access_sem)) {
+      finished_flag = 1;
+      perror("sem_post");
+    }
 
-    sem_wait(student->start_flag);
-
-    sem_wait(student->access_sem);
-
+    printf("%s is waiting for a homework\n", student->name);
+    if (0 != sem_wait(student->start_flag)) {
+      perror("sem_wait");
+      finished_flag = 1;
+    }
+    if (0 != sem_wait(student->access_sem)) {
+      perror("sem_wait");
+      finished_flag = 1;
+    }
     if (*(student->busy_flag) == -1) {
-      sem_post(student->access_sem);
+      if (0 != sem_post(student->access_sem)) {
+        perror("sem_post");
+        finished_flag = 1;
+      };
       break;
     }
-    sem_post(student->access_sem);
+    if (0 != sem_post(student->access_sem)) {
+      perror("sem_post");
+      finished_flag = 1;
+    };
     sleep(6 - student->speed);
-    sem_wait(student->access_sem);
+    if (0 != sem_wait(student->access_sem)) {
+      perror("sem_wait");
+      finished_flag = 1;
+    }
     student->hw_count++;
 
     if (*student->busy_flag == -1) {
-      sem_post(student->access_sem);
+      if (0 != sem_post(student->access_sem)) {
+        finished_flag = 1;
+        perror("sem_post");
+      };
       break;
     }
     *student->busy_flag = 0;
-    sem_post(student->access_sem);
+    if (0 != sem_post(student->access_sem)) {
+      perror("sem_post");
+      finished_flag = 1;
+    };
   }
   return NULL;
 }
@@ -282,25 +400,45 @@ void *readerThread(void *arg) {
     }
   }
   /*send one more time for understanding finished*/
-  sem_post(&reader_p.pmut);
-  sem_post(&reader_p.occupied);
-  sem_post(&reader_p.pmut);
-  sem_post(&reader_p.occupied);
+  if (0 != sem_post(&reader_p.pmut)) {
+    finished_flag = 1;
+    perror("sem_post");
+  }
+  if (0 != sem_post(&reader_p.occupied)) {
+    finished_flag = 1;
+    perror("sem_post");
+  };
+  if (0 != sem_post(&reader_p.pmut)) {
+    finished_flag = 1;
+    perror("sem_post");
+  };
+  if (0 != sem_post(&reader_p.occupied)) {
+    finished_flag = 1;
+    perror("sem_post");
+  }
+
   fclose(fp);
 
   pthread_exit(NULL);
 }
 void safe_enqueue(char c) {
-  if (sem_wait(&reader_p.empty) != 0)
+  if (sem_wait(&reader_p.empty) != 0) {
     perror("sem_wait(&reader_p.empty)");
-  if (sem_wait(&reader_p.pmut) != 0)
+    finished_flag = 1;
+  }
+  if (sem_wait(&reader_p.pmut) != 0) {
+    finished_flag = 1;
     perror("sem_wait(&reader_p.pmut)");
+  }
   enqueue(queue, c);
-  if (sem_post(&reader_p.pmut) != 0)
+  if (sem_post(&reader_p.pmut) != 0) {
     perror("sem_post(&reader_p.pmut)");
-
-  if (sem_post(&reader_p.occupied) != 0)
+    finished_flag = 1;
+  }
+  if (sem_post(&reader_p.occupied) != 0) {
     perror("sem_post(&reader_p.occupied)");
+    finished_flag = 1;
+  }
 }
 
 void print_students(const struct StudentForHire *student_arr,

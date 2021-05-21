@@ -16,7 +16,7 @@ struct StudentForHire *sort_students_by_speed(const struct StudentForHire arr[],
   for (int i = 0; i < size; i++) {
     new_arr[i] = arr[i];
   }
-  qsort(new_arr, size, sizeof(arr[0]), speed_comparator);
+  qsort(new_arr, size, sizeof(arr[0]), (__compar_fn_t)speed_comparator);
 #ifdef DEBUG
   printf("name: %s\nspeed:%d\nquality:%d\ncost:%d\n\n", new_arr[0].name,
          new_arr[0].speed, new_arr[0].quality, new_arr[0].cost);
@@ -33,7 +33,7 @@ sort_students_by_quality(const struct StudentForHire arr[], int size) {
   }
 
 
-  qsort(new_arr, size, sizeof(arr[0]), quality_comparator);
+  qsort(new_arr, size, sizeof(arr[0]), (__compar_fn_t)quality_comparator);
 #ifdef DEBUG
   printf("name: %s\nspeed:%d\nquality:%d\ncost:%d\n\n", new_arr[0].name,
          new_arr[0].speed, new_arr[0].quality, new_arr[0].cost);
@@ -50,7 +50,7 @@ struct StudentForHire *sort_students_by_cost(const struct StudentForHire arr[],
   }
 
 
-  qsort(new_arr, size, sizeof(arr[0]), cost_comparator);
+  qsort(new_arr, size, sizeof(arr[0]), (__compar_fn_t)cost_comparator);
 #ifdef DEBUG
   printf("name: %s\nspeed:%d\nquality:%d\ncost:%d\n\n", new_arr[0].name,
          new_arr[0].speed, new_arr[0].quality, new_arr[0].cost);
