@@ -1,7 +1,7 @@
 //
 // Created by umit on 20.05.2021.
 //
-#include "queue.h"
+#include "../lib/queue.h"
 int FRONT = 0;
 int REAR = 0;
 int TAG =

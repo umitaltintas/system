@@ -4,9 +4,9 @@
 #ifndef DEBUG
 //#define DEBUG
 #endif
-#include "main.h"
+#include "../lib/main.h"
 
-#include "queue.h"
+#include "../lib/queue.h"
 #include <pthread.h>
 #include <semaphore.h>
 #include <signal.h>

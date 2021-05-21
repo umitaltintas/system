@@ -2,9 +2,9 @@
 // Created by umit on 20.05.2021.
 //
 
-#include "sort.h"
-#include "data.h"
-#include "queue.h"
+#include "../lib/sort.h"
+#include "../lib/data.h"
+#include "../lib/queue.h"
 #include <pthread.h>
 #include <semaphore.h>
 #include <stdio.h>

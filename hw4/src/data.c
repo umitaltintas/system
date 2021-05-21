@@ -2,8 +2,8 @@
 // Created by umit on 20.05.2021.
 //
 
-#include "data.h"
-#include "sort.h"
+#include "../lib/data.h"
+#include "../lib/sort.h"
 #include <stdio.h>
 #include <stdlib.h>
 
